@@ -449,7 +449,6 @@ function stregistry_SaveContactDetails($params)
 		'billing'    => 'Billing',
 	);
 
-	$authCode = $this->getDomainAuthCodeFromOrder();
 	$json = STRegistry::Domains()->query($params['domainname']);
 	if (!ResponseHelper::isSuccess($json)) {
 		return __errorArray(ResponseHelper::fromJSON($json)->message);
