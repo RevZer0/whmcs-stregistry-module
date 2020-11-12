@@ -1,5 +1,7 @@
 <?php
 
+use WHMCS\Database\Capsule;
+
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'common_functions.php';
 
 /**
@@ -447,7 +449,7 @@ function stregistry_SaveContactDetails($params)
 		'billing'    => 'Billing',
 	);
 
-	// fetch domain
+	$authCode = $this->getDomainAuthCodeFromOrder();
 	$json = STRegistry::Domains()->query($params['domainname']);
 	if (!ResponseHelper::isSuccess($json)) {
 		return __errorArray(ResponseHelper::fromJSON($json)->message);
@@ -718,16 +720,13 @@ function stregistry_IDProtectToggle($params)
  */
 function stregistry_TransferSync($params)
 {
-	// init connection
 	if (($status = __initConnectionAndAuthorize($params)) !== true) {
 		return __errorArray($status);
 	}
-	// query transfer status
-	$json = STRegistry::Domains()->transferQuery($params['domain']);
+	$json = STRegistry::Domains()->transferQuery($params['domain'], __getAuthCodeFromOrder($params['domain']));
 	if (!ResponseHelper::isSuccess($json)) {
 		return __errorArray(ResponseHelper::fromJSON($json)->message);
 	}
-	// process transfer
 	$transferData = ResponseHelper::fromJSON($json, 'trnData')->result;
 
 	switch ($transferData['trStatus']) {
@@ -804,4 +803,13 @@ function stregistry_Sync($params)
 		'expired' => false,
 		'expirydate' => $domain->getDateExpire('Y-m-d'),
 	);
+}
+
+function __getAuthCodeFromOrder($domain)
+{
+    $domain = Capsule::table('tbldomains')->where('domain', $domain)->first();
+    $order  = Capsule::table('tblorders')->where('id', $domain->orderid)->first();
+    $data = unserialize($order->transfersecret) ?: [];
+
+    return $data[$domain] ?: '';
 }
